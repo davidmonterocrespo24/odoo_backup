@@ -4,7 +4,7 @@ Copyright 2019 Dinar Gabbasov <https://it-projects.info/team/GabbasovDinar>
 License MIT (https://opensource.org/licenses/MIT).
 -->
 <odoo>
-    <!--template
+    <template
         id="assets_backend"
         inherit_id="web.assets_backend"
         name="odoo_backup_sh assets"
@@ -15,5 +15,5 @@ License MIT (https://opensource.org/licenses/MIT).
                 src="/odoo_backup_sh_google_disk/static/src/js/dashboard.js"
             />
         </xpath>
-    </template-->
+    </template>
 </odoo>

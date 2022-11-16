@@ -18,8 +18,8 @@ from odoo.addons.odoo_backup_sh.models.odoo_backup_sh import (
 )
 
 try:
-    from apiclient import errors
     from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
+    from apiclient import errors
 except ImportError as err:
     logging.getLogger(__name__).debug(err)
 
@@ -147,7 +147,7 @@ class BackupConfig(models.Model):
 
     @api.model
     def make_backup_google_drive(
-        self, ts, name, dump_stream, zipf,info_file, info_file_content, cloud_params
+        self, ts, name, dump_stream, info_file, info_file_content, cloud_params
     ):
         # Upload two backup objects to Google Drive
         GoogleDriveService = self.env["ir.config_parameter"].get_google_drive_service()
@@ -164,24 +164,14 @@ class BackupConfig(models.Model):
             "name": compute_backup_info_filename(name, ts),
             "parents": [folder_id],
         }
-        module_metadata = {
-            "name": compute_backup_filename(
-                "All Module "+name, ts, info_file_content.get("encrypted")
-            ),
-            "parents": [folder_id],
-        }
         db_mimetype = "application/zip"
         info_mimetype = "text/plain"
         dump_stream.seek(0)
         info_file.seek(0)
-        files=[
+        for obj, mimetype, metadata in [
             [dump_stream, db_mimetype, db_metadata],
             [info_file, info_mimetype, info_metadata],
-        ]
-        if zipf:
-            files.append([zipf, db_mimetype, module_metadata],)
-
-        for obj, mimetype, metadata in files:
+        ]:
             media = MediaIoBaseUpload(obj, mimetype, resumable=True)
             GoogleDriveService.files().create(
                 body=metadata, media_body=media, fields="id"
@@ -207,21 +197,6 @@ class BackupInfo(models.Model):
         # TODO: add file_id in backup_info for this
         file_id = self.env["odoo_backup_sh.config"].get_google_drive_file_id(
             backup.backup_filename
-        )
-        return {
-            "type": "ir.actions.act_url",
-            "url": "https://drive.google.com/uc?id={}&export=download".format(file_id),
-            "target": "self",
-        }
-
-    def download_backup_module_action(self,):
-        self.assert_user_can_download_backup()
-
-        if self.storage_service != GOOGLE_DRIVE_STORAGE:
-            return super(BackupInfo, self).download_backup_action(self)
-
-        file_id = self.env["odoo_backup_sh.config"].get_google_drive_file_id(
-            "All Module "+ self.backup_filename
         )
         return {
             "type": "ir.actions.act_url",

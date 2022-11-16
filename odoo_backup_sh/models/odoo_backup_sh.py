@@ -1,6 +1,7 @@
 # Copyright 2018 Stanislav Krotov <https://it-projects.info/team/ufaks>
 # Copyright 2019 Dinar Gabbasov <https://it-projects.info/team/GabbasovDinar>
 # Copyright 2019 Ivan Yelizariev <https://it-projects.info/team/yelizariev>
+# Copyright 2021 Denis Mudarisov <https://github.com/trojikman>
 # License MIT (https://opensource.org/licenses/MIT).
 
 import copy
@@ -8,13 +9,12 @@ import logging
 import os
 import tempfile
 from datetime import datetime, timedelta
-import sys
-import zipfile
+
 import requests
 from dateutil.relativedelta import relativedelta
 
 import odoo
-from odoo import api, fields, models, tools, _
+from odoo import api, fields, models
 from odoo.exceptions import AccessError, UserError
 from odoo.tools import DEFAULT_SERVER_DATE_FORMAT, DEFAULT_SERVER_DATETIME_FORMAT
 from odoo.tools.translate import _
@@ -43,6 +43,10 @@ REMOTE_STORAGE_DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 BACKUP_NAME_SUFFIX = ".zip"
 BACKUP_NAME_ENCRYPT_SUFFIX = BACKUP_NAME_SUFFIX + ".enc"
 S3_STORAGE = "odoo_backup_sh"
+# Replace to True if you want to control all the databases while keeping /web/database/manager page hidden
+# Warning: if you use this module in sort of saas platform with many databases, be sure that unauthorized users cannot
+# install this module in their database and get dump of any database
+FORCE_ALL_DATABASE = False
 
 
 def compute_backup_filename(database, upload_datetime, is_encrypted):
@@ -92,9 +96,9 @@ class BackupConfig(models.Model):
 
     @api.model
     def _compute_database_names(self):
-        # Uncomment following line if you want control all the databases, while keeping /web/database/manager page hidden
-        # return [(db, db) for db in odoo.service.db.list_dbs(force=True)]
-        if odoo.tools.config["list_db"]:
+        if FORCE_ALL_DATABASE:
+            return [(db, db) for db in odoo.service.db.list_dbs(force=True)]
+        elif odoo.tools.config["list_db"]:
             return [
                 (db, db) for db in odoo.service.db.list_dbs() if db != "session_store"
             ]
@@ -142,7 +146,8 @@ class BackupConfig(models.Model):
         "Yearly limit", default=1, help="How many yearly backups to preserve."
     )
     storage_service = fields.Selection(
-        selection=[(S3_STORAGE, "S3")], default=S3_STORAGE)
+        selection=[(S3_STORAGE, "S3")], default=S3_STORAGE, required=True
+    )
     unlimited_time_frame = fields.Char(default="hour")
     common_rotation = fields.Selection(selection=ROTATION_OPTIONS, default="unlimited")
     max_backups = fields.Integer(readonly=True, store=False)
@@ -152,11 +157,6 @@ class BackupConfig(models.Model):
         help="If the setting is enabled then new backups of current database will not "
         "be sent to the storage server",
     )
-
-    backup_modules = fields.Boolean(
-        string="Backups de los Modulos",
-        default=False)
-    addons_paths=fields.Char(string="Addons Path")
 
     @api.model
     def _compute_backup_count(self):
@@ -638,8 +638,13 @@ class BackupConfig(models.Model):
         if config_record.backup_simulation:
             dump_stream = tempfile.TemporaryFile()
         else:
-            dump_stream = odoo.service.db.dump_db(name, None, "zip")
+            if FORCE_ALL_DATABASE:
+                from unittest.mock import patch
 
+                with patch.dict(odoo.tools.config.options, {"list_db": True}):
+                    dump_stream = odoo.service.db.dump_db(name, None, "zip")
+            else:
+                dump_stream = odoo.service.db.dump_db(name, None, "zip")
         if config_record.encrypt_backups and config_record.backup_simulation is False:
             # GnuPG ignores the --output parameter with an existing file object as value
             backup_encrpyted = tempfile.NamedTemporaryFile()
@@ -674,15 +679,7 @@ class BackupConfig(models.Model):
             line = key + " = " + str(value) + "\n"
             info_file.write(line.encode())
         info_file.seek(0)
-        config_record = self.with_context({"active_test": False}).search(
-            [("database", "=", name), ("storage_service", "=", service)]
-        )
-        t= False
-        if config_record.addons_paths:
-            t=tempfile.TemporaryFile()
-            odoo.tools.osutil.zip_dir(config_record.addons_paths , t, include_dir=False)
-            t.seek(0)
-        return dump_stream,t, info_file, info_file_content
+        return dump_stream, info_file, info_file_content
 
     @api.model
     def make_backup(self, name, service, init_by_cron_id=None):
@@ -704,7 +701,7 @@ class BackupConfig(models.Model):
             cloud_params = BackupController.get_cloud_params(env=self.env)
         dt = datetime.utcnow()
         ts = dt.strftime(REMOTE_STORAGE_DATETIME_FORMAT)
-        dump_stream,zipf ,info_file, info_file_content = self.get_dump_stream_and_info_file(
+        dump_stream, info_file, info_file_content = self.get_dump_stream_and_info_file(
             name, service, ts
         )
         dump_stream.seek(0)
@@ -713,7 +710,7 @@ class BackupConfig(models.Model):
         # make a backup if it is not a simulation
         if hasattr(self, cust_method_name) and config_record.backup_simulation is False:
             method = getattr(self, cust_method_name)
-            method(ts, name, dump_stream,zipf, info_file, info_file_content, cloud_params)
+            method(ts, name, dump_stream, info_file, info_file_content, cloud_params)
 
         # Create new record with backup info data
         info_file_content["upload_datetime"] = dt

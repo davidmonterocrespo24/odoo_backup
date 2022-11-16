@@ -6,7 +6,7 @@
     "category": "Backup",
     # "live_test_url": "",
     "images": ["images/google drive backing up.jpg"],
-    "version": "14.0.1.0.0",
+    "version": "13.0.1.0.0",
     "application": False,
     "author": "IT-Projects LLC, Dinar Gabbasov",
     "support": "apps@itpp.dev",
@@ -21,14 +21,7 @@
         "views/odoo_backup_sh_google_drive_templates.xml",
         "views/res_config_settings_views.xml",
     ],
-    'assets': {
-        'web.assets_backend': [
-            '/odoo_backup_sh_google_disk/static/src/js/dashboard.js',
-        ],
-        'web.assets_qweb': [
-            '/odoo_backup_sh_google_disk/static/src/xml/dashboard.xml',
-        ],
-    },
+    "qweb": ["static/src/xml/dashboard.xml"],
     "demo": [],
     "post_load": None,
     "pre_init_hook": None,
