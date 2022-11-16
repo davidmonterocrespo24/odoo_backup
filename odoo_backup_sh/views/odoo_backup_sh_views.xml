@@ -478,9 +478,9 @@ License MIT (https://opensource.org/licenses/MIT).
     <menuitem
         name="Backups"
         id="menu_backup_root"
+        parent="base.menu_administration"
+        groups="base.group_no_one"
         sequence="100"
-        web_icon="odoo_backup_sh,static/description/icon.png"
-        groups="odoo_backup_sh.group_user"
     />
     <menuitem
         name="Dashboard"
