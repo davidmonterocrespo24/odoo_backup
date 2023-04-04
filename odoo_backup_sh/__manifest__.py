@@ -8,7 +8,7 @@
     "category": "Backup",
     # "live_test_url": "",
     "images": ["images/odoo-backup.sh.jpg"],
-    "version": "14.0.1.0.2",
+    "version": "15.0.1.0.2",
     "author": "IT-Projects LLC",
     "support": "apps@itpp.dev",
     "website": "https://apps.odoo.com/apps/modules/14.0/odoo_backup_sh/",
