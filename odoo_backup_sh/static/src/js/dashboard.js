@@ -55,10 +55,8 @@ odoo.define("odoo_backup_sh.dashboard", function (require) {
         },
 
         willStart: function () {
-            var self = this;
-            return $.when(ajax.loadLibs(this), this._super()).then(function () {
-                return self.fetch_dashboard_data();
-            });
+            var self = this;          
+                return self.fetch_dashboard_data();            
         },
 
         fetch_dashboard_data: function () {
