@@ -18,11 +18,6 @@ from odoo.addons.odoo_backup_sh.models.odoo_backup_sh import (
 )
 
 try:
-    from apiclient import errors
-except ImportError as err:
-    _logger.error("++++++++++++++++++++++++++++++++Error cargando la libreria apiclient: %s", err)
-
-try:
     from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 except ImportError as err:
     _logger.error("++++++++++++++++++++++++++++++++Error cargando la libreria googleapiclient: %s", err)
@@ -144,8 +139,8 @@ class BackupConfig(models.Model):
                 file_id = self.get_google_drive_file_id(file[0])
                 try:
                     GoogleDriveService.files().delete(fileId=file_id).execute()
-                except errors.HttpError as e:
-                    _logger.exception(e)
+                except Exception as e:
+                    _logger.error("Error deleting file %s: %s", file_id, e)
         return super(BackupConfig, self).delete_remote_objects(
             cloud_params, list(set(remote_objects) - set(google_drive_remove_objects))
         )
@@ -291,7 +286,7 @@ class DeleteRemoteBackupWizard(models.TransientModel):
                 )
                 try:
                     GoogleDriveService.files().delete(fileId=file_id).execute()
-                except errors.HttpError as e:
-                    _logger.exception(e)
+                except Exception:
+                    _logger.error("Can't delete file %s from Google Drive", obj_name)
         backup_google_drive_info_records.unlink()
         super(DeleteRemoteBackupWizard, self).delete_remove_backup_button()
