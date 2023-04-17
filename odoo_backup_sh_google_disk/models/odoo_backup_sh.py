@@ -23,7 +23,6 @@ try:
 except ImportError as err:
     logging.getLogger(__name__).debug(err)
 
-
 _logger = logging.getLogger(__name__)
 GOOGLE_DRIVE_STORAGE = "google_drive"
 
@@ -38,7 +37,7 @@ class BackupConfig(models.Model):
     @api.model
     def get_backup_list(self, cloud_params, service):
         backup_list = (
-            super(BackupConfig, self).get_backup_list(cloud_params, service) or dict()
+                super(BackupConfig, self).get_backup_list(cloud_params, service) or dict()
         )
         if service != GOOGLE_DRIVE_STORAGE:
             return backup_list
@@ -55,12 +54,12 @@ class BackupConfig(models.Model):
         )
         response = (
             GoogleDriveService.files()
-            .list(
+                .list(
                 q="'" + folder_id + "' in parents",
                 fields="nextPageToken, files(id, name)",
                 spaces="drive",
             )
-            .execute()
+                .execute()
         )
         google_drive_backup_list = [
             (r.get("name"), GOOGLE_DRIVE_STORAGE) for r in response.get("files", [])
@@ -102,12 +101,12 @@ class BackupConfig(models.Model):
         )
         response = (
             GoogleDriveService.files()
-            .list(
+                .list(
                 q="'" + folder_id + "' in parents and name = '" + file_name + "'",
                 fields="nextPageToken, files(id)",
                 spaces="drive",
             )
-            .execute()
+                .execute()
         )
         file = response.get("files", [])
         return file[0].get("id")
@@ -147,7 +146,7 @@ class BackupConfig(models.Model):
 
     @api.model
     def make_backup_google_drive(
-        self, ts, name, dump_stream, zipf,info_file, info_file_content, cloud_params
+            self, ts, name, dump_stream, zipf, info_file, info_file_content, cloud_params
     ):
         # Upload two backup objects to Google Drive
         GoogleDriveService = self.env["ir.config_parameter"].get_google_drive_service()
@@ -166,7 +165,7 @@ class BackupConfig(models.Model):
         }
         module_metadata = {
             "name": compute_backup_filename(
-                "All Module "+name, ts, info_file_content.get("encrypted")
+                "All Module " + name, ts, info_file_content.get("encrypted")
             ),
             "parents": [folder_id],
         }
@@ -174,18 +173,27 @@ class BackupConfig(models.Model):
         info_mimetype = "text/plain"
         dump_stream.seek(0)
         info_file.seek(0)
-        files=[
+        files = [
             [dump_stream, db_mimetype, db_metadata],
             [info_file, info_mimetype, info_metadata],
         ]
         if zipf:
-            files.append([zipf, db_mimetype, module_metadata],)
+            files.append([zipf, db_mimetype, module_metadata], )
 
         for obj, mimetype, metadata in files:
             media = MediaIoBaseUpload(obj, mimetype, resumable=True)
-            GoogleDriveService.files().create(
-                body=metadata, media_body=media, fields="id", timeout=530
-            ).execute()
+            intentos = 40
+            while True:
+                try:
+                    intentos -= 1
+                    GoogleDriveService.files().create(
+                        body=metadata, media_body=media, fields="id", timeout=530
+                    ).execute()
+                    break
+                except errors.HttpError as e:
+                    if intentos == 0:
+                        break
+                    _logger.exception(e)
 
 
 class BackupInfo(models.Model):
@@ -214,14 +222,14 @@ class BackupInfo(models.Model):
             "target": "self",
         }
 
-    def download_backup_module_action(self,):
+    def download_backup_module_action(self, ):
         self.assert_user_can_download_backup()
 
         if self.storage_service != GOOGLE_DRIVE_STORAGE:
             return super(BackupInfo, self).download_backup_action(self)
 
         file_id = self.env["odoo_backup_sh.config"].get_google_drive_file_id(
-            "All Module "+ self.backup_filename
+            "All Module " + self.backup_filename
         )
         return {
             "type": "ir.actions.act_url",
@@ -244,8 +252,8 @@ class BackupRemoteStorage(models.Model):
     def compute_google_drive_used_remote_storage(self):
         amount = sum(
             self.env["odoo_backup_sh.backup_info"]
-            .search([("storage_service", "=", GOOGLE_DRIVE_STORAGE)])
-            .mapped("backup_size")
+                .search([("storage_service", "=", GOOGLE_DRIVE_STORAGE)])
+                .mapped("backup_size")
         )
         today_record = self.search(
             [
