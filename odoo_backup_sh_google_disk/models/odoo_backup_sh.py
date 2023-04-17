@@ -17,10 +17,11 @@ from odoo.addons.odoo_backup_sh.models.odoo_backup_sh import (
     get_backup_by_id,
 )
 
-
-from apiclient import errors
-from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
-
+try:
+    from apiclient import errors
+    from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
+except ImportError as err:
+    logging.getLogger(__name__).debug(err)
 
 
 _logger = logging.getLogger(__name__)
