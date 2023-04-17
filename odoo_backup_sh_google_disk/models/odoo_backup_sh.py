@@ -6,7 +6,7 @@ import io
 import logging
 import tempfile
 from datetime import datetime
-
+_logger = logging.getLogger(__name__)
 from odoo import api, fields, models
 from odoo.tools import DEFAULT_SERVER_DATE_FORMAT
 
@@ -19,9 +19,14 @@ from odoo.addons.odoo_backup_sh.models.odoo_backup_sh import (
 
 try:
     from apiclient import errors
+except ImportError as err:
+    _logger.error("++++++++++++++++++++++++++++++++Error cargando la libreria apiclient: %s", err)
+
+try:
     from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 except ImportError as err:
-    logging.getLogger(__name__).debug(err)
+    _logger.error("++++++++++++++++++++++++++++++++Error cargando la libreria googleapiclient: %s", err)
+
 
 
 _logger = logging.getLogger(__name__)
