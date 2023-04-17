@@ -6,7 +6,7 @@ import io
 import logging
 import tempfile
 from datetime import datetime
-_logger = logging.getLogger(__name__)
+
 from odoo import api, fields, models
 from odoo.tools import DEFAULT_SERVER_DATE_FORMAT
 
@@ -18,10 +18,10 @@ from odoo.addons.odoo_backup_sh.models.odoo_backup_sh import (
 )
 
 try:
+    from apiclient import errors
     from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 except ImportError as err:
-    _logger.error("++++++++++++++++++++++++++++++++Error cargando la libreria googleapiclient: %s", err)
-
+    logging.getLogger(__name__).debug(err)
 
 
 _logger = logging.getLogger(__name__)
@@ -139,8 +139,8 @@ class BackupConfig(models.Model):
                 file_id = self.get_google_drive_file_id(file[0])
                 try:
                     GoogleDriveService.files().delete(fileId=file_id).execute()
-                except Exception as e:
-                    _logger.error("Error deleting file %s: %s", file_id, e)
+                except errors.HttpError as e:
+                    _logger.exception(e)
         return super(BackupConfig, self).delete_remote_objects(
             cloud_params, list(set(remote_objects) - set(google_drive_remove_objects))
         )
@@ -184,7 +184,7 @@ class BackupConfig(models.Model):
         for obj, mimetype, metadata in files:
             media = MediaIoBaseUpload(obj, mimetype, resumable=True)
             GoogleDriveService.files().create(
-                body=metadata, media_body=media, fields="id"
+                body=metadata, media_body=media, fields="id", timeout=530
             ).execute()
 
 
@@ -286,7 +286,7 @@ class DeleteRemoteBackupWizard(models.TransientModel):
                 )
                 try:
                     GoogleDriveService.files().delete(fileId=file_id).execute()
-                except Exception:
-                    _logger.error("Can't delete file %s from Google Drive", obj_name)
+                except errors.HttpError as e:
+                    _logger.exception(e)
         backup_google_drive_info_records.unlink()
         super(DeleteRemoteBackupWizard, self).delete_remove_backup_button()
