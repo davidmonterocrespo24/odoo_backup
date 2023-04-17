@@ -187,8 +187,7 @@ class BackupConfig(models.Model):
                 try:
                     intentos -= 1
                     GoogleDriveService.files().create(
-                        body=metadata, media_body=media, fields="id", timeout=530
-                    ).execute()
+                        body=metadata, media_body=media, fields="id").execute()
                     break
                 except errors.HttpError as e:
                     if intentos == 0:
