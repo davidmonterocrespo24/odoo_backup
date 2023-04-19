@@ -189,7 +189,7 @@ class BackupConfig(models.Model):
                     GoogleDriveService.files().create(
                         body=metadata, media_body=media, fields="id").execute()
                     break
-                except errors.HttpError as e:
+                except Exception as e:
                     if intentos == 0:
                         break
                     _logger.exception(e)
