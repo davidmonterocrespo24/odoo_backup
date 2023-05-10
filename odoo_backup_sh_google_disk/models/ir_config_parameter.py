@@ -9,17 +9,10 @@ from odoo.addons.odoo_backup_sh.models.odoo_backup_sh import ModuleNotConfigured
 
 _logger = logging.getLogger(__name__)
 
-try:
-    from google.oauth2 import service_account
-except ImportError as err:
-    _logger.debug(err)
 
-try:
-    from googleapiclient.discovery import build
-    from googleapiclient.discovery_cache.base import Cache
-except ImportError as err:
-    Cache = object
-    _logger.debug(err)
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.discovery_cache.base import Cache
 
 # all scopes you can find: here https://developers.google.com/identity/protocols/googlescopes
 SCOPES = ["https://www.googleapis.com/auth/drive"]
@@ -52,9 +45,11 @@ class Param(models.Model):
         except json.JSONDecodeError:
             raise ModuleNotConfigured("Service Key value is not a json")
         # create a credentials
+        _logger.error("Service Odoo Backups service: %s", str(service_account_key))
         credentials = service_account.Credentials.from_service_account_info(
             service_account_key, scopes=SCOPES
         )
+        _logger.error("Service Odoo Backups credentials: %s", str(credentials))
         # create a service using REST API Google Drive v3 and credentials
         service = build("drive", "v3", credentials=credentials, cache=MemoryCache())
         return service
