@@ -6,7 +6,6 @@ import io
 import logging
 import tempfile
 from datetime import datetime
-import time
 
 from odoo import api, fields, models
 from odoo.tools import DEFAULT_SERVER_DATE_FORMAT
@@ -17,9 +16,12 @@ from odoo.addons.odoo_backup_sh.models.odoo_backup_sh import (
     compute_backup_info_filename,
     get_backup_by_id,
 )
-from apiclient import errors
-from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
+try:
+    from apiclient import errors
+    from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
+except ImportError as err:
+    logging.getLogger(__name__).debug(err)
 
 _logger = logging.getLogger(__name__)
 GOOGLE_DRIVE_STORAGE = "google_drive"
@@ -180,10 +182,9 @@ class BackupConfig(models.Model):
 
         for obj, mimetype, metadata in files:
             media = MediaIoBaseUpload(obj, mimetype, resumable=True)
-            intentos = 155
+            intentos = 40
             while True:
                 try:
-                    time.sleep(100)
                     GoogleDriveService = self.env["ir.config_parameter"].get_google_drive_service()
                     intentos -= 1
                     GoogleDriveService.files().create(
