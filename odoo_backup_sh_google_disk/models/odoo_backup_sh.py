@@ -149,7 +149,7 @@ class BackupConfig(models.Model):
             self, ts, name, dump_stream, zipf, info_file, info_file_content, cloud_params
     ):
         # Upload two backup objects to Google Drive
-        GoogleDriveService = self.env["ir.config_parameter"].get_google_drive_service()
+
         folder_id = self.env["ir.config_parameter"].get_param(
             "odoo_backup_sh_google_disk.google_disk_folder_id"
         )
@@ -182,17 +182,18 @@ class BackupConfig(models.Model):
 
         for obj, mimetype, metadata in files:
             media = MediaIoBaseUpload(obj, mimetype, resumable=True)
-            intentos = 40
+            intentos = 5
             while True:
                 try:
+                    GoogleDriveService = self.env["ir.config_parameter"].get_google_drive_service()
                     intentos -= 1
                     GoogleDriveService.files().create(
                         body=metadata, media_body=media, fields="id").execute()
                     break
                 except Exception as e:
                     if intentos == 0:
-                        break
-                    _logger.exception(e)
+                        _logger.error("+++++ +++ Fallos en todos los intentos al subir el archivo a Google Drive" + str(e))
+                        raise ValueError("Error al subir el archivo a Google Drive" + str(e))
 
 
 class BackupInfo(models.Model):
